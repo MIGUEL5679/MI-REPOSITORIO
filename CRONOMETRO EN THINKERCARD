@@ -1,0 +1,63 @@
+#include <LiquidCrystal.h>
+LiquidCrystal lcd(7, 6, 5, 4, 3, 2);
+
+// Estado del cronómetro: 1 = pausa, 2 = contar
+int estado = 1;
+
+unsigned int t[4] = {0, 0, 0, 0}; // horas, minutos, segundos, centésimas
+unsigned long ultTiempo = 0;
+unsigned long ultParpadeo = 0;
+bool ledVerdeEstado = false;
+
+const int btns[2] = {A0, A1}; // pausa, iniciar
+const int ledRojo = A3;
+const int ledVerde = A4;
+
+void setup() {
+  for (int i = 0; i < 2; i++) pinMode(btns[i], INPUT);
+  pinMode(ledRojo, OUTPUT);
+  pinMode(ledVerde, OUTPUT);
+
+  lcd.begin(16, 2);
+  lcd.setCursor(3, 0);
+  lcd.print("CRONOMETRO");
+}
+
+void loop() {
+  // Lectura de botones
+  if (digitalRead(btns[0]) == LOW) estado = 1; // pausa
+  if (digitalRead(btns[1]) == LOW) estado = 2; // iniciar
+
+  // Conteo del tiempo
+  if (estado == 2 && millis() - ultTiempo >= 10) {
+    ultTiempo = millis();
+    t[3]++;
+    if (t[3] >= 100) { t[3] = 0; t[2]++; }
+    if (t[2] >= 60)  { t[2] = 0; t[1]++; }
+    if (t[1] >= 60)  { t[1] = 0; t[0]++; }
+  }
+
+  // Mostrar tiempo en pantalla
+  lcd.setCursor(4, 1);
+  for (int i = 0; i < 3; i++) {
+    if (t[i] < 10) lcd.print("0");
+    lcd.print(t[i]);
+    if (i < 2) lcd.print(":");
+  }
+
+  // Control de LEDs
+  if (estado == 2) {
+    // Parpadeo del LED verde cada 500 ms
+    if (millis() - ultParpadeo >= 500) {
+      ultParpadeo = millis();
+      ledVerdeEstado = !ledVerdeEstado;
+      digitalWrite(ledVerde, ledVerdeEstado);
+    }
+    digitalWrite(ledRojo, LOW); // rojo apagado
+  } else {
+    // LED verde apagado, rojo encendido
+    digitalWrite(ledVerde, LOW);
+    digitalWrite(ledRojo, HIGH);
+    ledVerdeEstado = false;
+  }
+}
